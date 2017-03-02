@@ -1,0 +1,26 @@
+@CHARSET "UTF-8";
+
+.dashicons.action{
+	cursor: pointer;
+}
+
+.dashicons.action:hover{
+	color:red;
+}
+
+.analyzeWrapper{
+	min-height: 200px;
+}
+
+.footerSpacer{
+	min-height: 100px;
+}
+
+
+@media print
+{    
+    .no-print, .no-print *
+    {
+        display: none !important;
+    }
+}
