@@ -1,13 +1,67 @@
 /**
  * 
  */
+//=============================================================
+//			Just a model for the objects passed in app, not used anywhere
+//=============================================================
 
+	function am_ap_getNewAnalyze(title){
+		return {
+			title: title, // each analyze is a 'analyze' post-type with titel in format YYYY-MM-DD
+			id: -1,
+			substances: [ // array of substances
+			              { substance_id: '-1', // substance term_id
+			                register_time: '12:00',
+			                values: [ // array of values for each material in the substance
+			                         { 	
+			                           	val: '14.90',  // registered value
+                                     	mat_id: 4,     // material term_id
+                                     	mat_description: 'lot 1 exp:22.05.2018',
+                                     	mu_id: 2 // measure unit term_id
+			                         }
+			                		]
+			              } ]			
+		}
+	}
+	
+	function am_ap_getNewSubstance(){
+		return {
+			term_id: -1,
+			slug: "",
+			name: "",
+			materials: [], // array with materials term_id's
+			measure_unit: -1, // the term_id for measure_unit			
+		}
+	}
+	
+	function am_ap_getNewMaterial(){
+		return {
+			term_id: -1, 
+			slug: '',
+			name: '',
+			description: '',
+			count: 0,
+			taxonomy: 'material'			
+		}
+	}
+	
+	function am_ap_getNewMeasureUnit(){
+		return {
+			term_id: -1, 
+			slug: '',
+			name: '',
+			description: '',
+			count: 0,
+			taxonomy: 'measure_unit'			
+		}
+	}
 
 //=============================================================
 //						general common fuctions for components
 //=============================================================
 
-var appFunc = {
+var appFunc = {	
+		
 	getAnalyzeSubstanceById: function (analyze, substanceTermId){
 		if(! analyze.substances) return undefined;
 		
@@ -19,7 +73,7 @@ var appFunc = {
 			}
 		}
 		
-		return undefined;
+		return undefined
 	},
 	
 	getMaterialNameById(materialsArr, materialTermId){
@@ -31,7 +85,7 @@ var appFunc = {
 			}
 		}
 		
-		return '';
+		return ''
 	},
 	
 	getMaterialDescriptionById(materialsArr, materialTermId){
@@ -43,7 +97,7 @@ var appFunc = {
 			}
 		}
 		
-		return '';
+		return ''
 	},
 	
 	getSubstanceMaterialValueById(substance, materialTermId){
@@ -55,7 +109,7 @@ var appFunc = {
 			}
 		}
 		
-		return null;
+		return ''
 	},
 	
 	getMeasurUnitNameById(muArr, termId){
@@ -67,7 +121,7 @@ var appFunc = {
 			}
 		}
 		
-		return '';
+		return ''
 	}
 }
 
@@ -179,7 +233,7 @@ Vue.component('substance-editor', {
 			editedItem: this.getNewEditedItem(),
 			editState: 'add',
 			decimalsOptions: [0, 1, 2, 3],
-			levelsOptions: [1, 2, 3],
+			levelsOptions: [1, 2, 3, 4, 5],
 			levels: 2
 		}		
 	},
@@ -286,9 +340,20 @@ Vue.component('substance-editor', {
 				return false;
 			}
 			
-			for(var i = 0; i<this.editedItem.materials.length; i++){
+			var selectedMaterials = [];
+			
+			for(var i = 0; i < this.editedItem.materials.length; i++){
+				selectedMaterials.push(this.editedItem.materials[i]['term_id'])
 				if(!this.editedItem.materials[i]['term_id']){
 					return false;
+				}
+			}
+			
+			// check that each material is unique
+			
+			for(var i = 0; i < selectedMaterials.length; i++){
+				if(i != selectedMaterials.indexOf(selectedMaterials[i])){
+					return false
 				}
 			}
 			
@@ -655,6 +720,7 @@ Vue.component('analyzes-monitor', {
 	        'measureUnitsList',
 	        'analyzesList',
 	        'currentSubstance',
+			'editedAnalyze',
 	        'startDate',
 	        'endDate'
 	        ],
@@ -685,6 +751,7 @@ Vue.component('analyzes-monitor', {
 				:current-substance="currentSubstance"
 				:measure-units-list="measureUnitsList"
 				:materials-list="materialsList"
+				:edited-item="editedAnalyze"
 				@changeView="onChangeView"
 				>
 			</analyzes-editor>
@@ -714,14 +781,14 @@ Vue.component('analyzes-editor', {
 props: ['measureUnitsList', 
         'substancesList', 
         'currentSubstance',
-        'materialsList'
+        'materialsList',
+        'editedItem'
         ],
 
 data: function(){
 	return {
-		editedDate: moment().format('YYYY-MM-DD'),
-		editedItem:{},
-		editedItemSubstance:{}
+		editedItemSubstance:{},
+		flatpikr: {}
 	}
 },
 
@@ -735,8 +802,7 @@ methods:{
 		var time = event.detail.dateStr.substr(11);
 
 		if(date != this.editedItem.title ){
-			this.editedItem.title = date;
-			this.fetchEditedItem(date, this);
+			bus.$emit('editedItemDateChanged', date)		
 		}else{ // if it was only to change the record_time
 			if(this.editedItemSubstance){
 				this.editedItemSubstance.register_time = time;
@@ -746,7 +812,6 @@ methods:{
 	
 	
 	setEditedItem(item){
-		this.editedItem = item;
 		this.createEditedItemSubstance();
 	},
 	
@@ -758,15 +823,23 @@ methods:{
 			itemSubstance = {values:[]}
 		}
 		
-		var values = [];
 
-		for(var i = 0 ; i < this.currentSubstance.materials.length; i++){
+		
+		var material_terms = []
+		
+		for(var i = 0; i < this.currentSubstance.materials.length; i++){
+			material_terms.push(this.currentSubstance.materials[i].term_id)
+		}
+		
+		var values = []
+
+		for(var i = 0 ; i < material_terms.length; i++){
 			var row = {};
 
-			row['val'] = itemSubstance.values[i] && itemSubstance.values[i]['val'] ? itemSubstance.values[i]['val'] : '';
-			row['mat_id'] = itemSubstance.values[i] && itemSubstance.values[i]['mat_id'] ? itemSubstance.values[i]['mat_id'] : this.currentSubstance['materials'][i]['term_id'];
-			row['mat_description'] = itemSubstance.values[i] && itemSubstance.values[i]['mat_description'] ? itemSubstance.values[i]['mat_description'] : appFunc.getMaterialDescriptionById(this.materialsList, this.currentSubstance['materials'][i]['term_id']);
-			row['mu_id'] = itemSubstance.values[i] && itemSubstance.values[i]['mu_id'] ? itemSubstance.values[i]['mu_id'] : this.currentSubstance['measure_unit']; 
+			row['val'] = appFunc.getSubstanceMaterialValueById(itemSubstance, material_terms[i]) 
+			row['mat_id'] = material_terms[i] 
+			row['mat_description'] = appFunc.getMaterialDescriptionById(this.materialsList, material_terms[i]) 
+			row['mu_id'] = this.currentSubstance['measure_unit']
 			values[i] = row;
 		}
 		
@@ -777,35 +850,25 @@ methods:{
 		edItemSub.comment = itemSubstance.comment;
 		edItemSub.register_time = itemSubstance.register_time ? itemSubstance.register_time : moment().format('H:mm');
 		
-
+		
 		this.editedItemSubstance = edItemSub;
+		this.updateFlatpikrDate(this.editedItem.title, this.editedItemSubstance.register_time)
+		
+		console.log('this.editedItemSubstance ')
+		console.log(this.editedItemSubstance )
 	},
 	
 	resetEditedSubstance(){
 		this.createEditedItemSubstance();
 	}, 
 	
-	fetchEditedItem(title, comp){
-		var action = 'get_analyze';
-		jQuery.post(
-				ajax_obj.ajax_url, 
-			    {
-			        'action': action,
-			        'data':   title
-			    }, 
-			    function(response){
-	
-			    	var r = JSON.parse(response)
-			    	if(r.status == 'error'){
-			    		alert("Error: " + r.msg);
-			    		return;
-			    	} else if(r.result){ // if is an edit request			    		
-			    		comp.setEditedItem(r.result);			    		
-			    	}
-			    }
-			);
+
+	updateFlatpikrDate(date, time){
+		let d = date ? date : moment().format('YYYY-MM-DD')
+		d += ' '+ (time ? time : moment().format('H:mm') )
+		
+		this.flatpikr.setDate(d);
 	},
-	
 	
 	
 	onSubmit(){
@@ -838,7 +901,7 @@ methods:{
 			    	}
 			    	
 			    	if(r.result){ // if is an edit request
-			    		comp.setEditedItem(r.result);
+			    		//comp.setEditedItem(r.result);
 			    		bus.$emit('analyzeUpdated', r.result);
 			    	}
 			    }
@@ -917,11 +980,15 @@ watch: {
 	
 	'currentSubstance': function(){
 		this.createEditedItemSubstance();
-	}
+	},
+	
+	'editedItem': function(){
+		this.setEditedItem(this.editedItem)
+	},
 },
 
 mounted: function(){
-	flatpickr("#editedItemDate",{
+	this.flatpikr = flatpickr("#editedItemDate",{
 		
 		"locale": "ro",
 		enableTime: true,
@@ -939,9 +1006,11 @@ mounted: function(){
 			instance.element.dispatchEvent(event);
 		}
 
-	}),
+		})
 	
-	this.fetchEditedItem(this.editedDate, this)
+		this.setEditedItem(this.editedItem)
+		
+		
 },
 
 template: `
@@ -987,7 +1056,7 @@ template: `
 				<label class="control-label" for="analyze_comment">Comentariu</label>
 				<input id="analyze_comment" type="text" v-model="editedItemSubstance.comment" class="form-control form-inline">
 			</div>
-			
+		<div class="text-right"><span class="dashicons dashicons-info" data-toggle="tooltip" title="Pentru salvare este necesar ca valorile sa aiba numarul de zecimale specificate in setari."></span></div>
 		<div class="text-center">
 		<button type="submit" class="btn btn-primary" :disabled="!formIsValid">Salvează</button>
 		<button type="button" class="btn btn-warning" @click="resetEditedSubstance">Resetează</button>
@@ -1238,38 +1307,45 @@ Vue.component('analyzes-graphic-container', {
 	computed:{		
 		
 		graphicsData: function(){
-			// days as labesl
-			var labels = [];
-			this.analyzesList.forEach(function(e){
-				labels.push(moment(e.title).format("DD-MM"));
+			
+			// days as labels
+			var labels = []
+			
+			this.analyzesList.forEach(function(e){		
+				labels.push(e.title)
 			});
+			
+			var substanceId = this.currentSubstance.term_id
+			
+			 var material_terms = []
+			 var values = [] // array for storing values
+			 var sum = []
+			 
+			 for(var i = 0; i < this.currentSubstance.materials.length; i++){
+				 material_terms.push(this.currentSubstance.materials[i].term_id)
+					values[i] = []
+					sum[i] = []
+			 }
 
-			// data for current substace and time interval
-			var levels = parseInt(this.currentSubstance.materials.length);
-			var substanceId = this.currentSubstance.term_id;
-			var values = [];
-			
-			var sum = [];
-			
-			for(var i = 0; i < levels; i++){
-				values[i] = [];
-				sum[i] = [];
-			}
+			// data for current substace and time interval						
 			
 			this.analyzesList.forEach(function(e){
-				var s = appFunc.getAnalyzeSubstanceById(e, substanceId);				
-				
-				if(s && s.values){
-					for(var i = 0; i < levels; i++){
-						var val = s.values[i] && s.values[i]['val'] ? s.values[i]['val'] : null;
-						values[i].push(val);
+				var s = appFunc.getAnalyzeSubstanceById(e, substanceId)	
+				if(s){
+					material_terms.forEach(function(m, i){
+						let val = appFunc.getSubstanceMaterialValueById(s, m)
+						
+						
 						if(val){
-							sum[i].push(parseInt(val));
+							sum[i].push(parseInt(val))
+							values[i].push(val)
+						}else{
+							values[i].push( null) 
 						}
-					}
+					})
 				}else{
-					for(var i = 0; i < levels; i++){
-						values[i].push( null) ;
+					for(var i = 0; i < material_terms.length; i++){
+						values[i].push( null) 
 					}
 				}
 			});
@@ -1277,8 +1353,8 @@ Vue.component('analyzes-graphic-container', {
 			
 			// searching target, warning and alerting limits
 			var limits = [];
-			for(var i = 0; i < levels; i++){
-				limits[i] =this.currentSubstance.materials[i];
+			for(var i = 0; i < material_terms.length; i++){
+				limits[i] = this.currentSubstance.materials[i];
 			}
 			
 			
@@ -1287,9 +1363,15 @@ Vue.component('analyzes-graphic-container', {
 			
 			var N = labels.length;
 			
-			for(var i = 0; i < levels; i++){
-				var sd = this.standardDeviation(sum[i]);
-				var md = this.average(sum[i]);
+			for(var i = 0; i < material_terms.length; i++){
+				
+				var sd = 0
+				var md = 0
+				
+				if(sum[i].length){
+					var sd = this.standardDeviation(sum[i]);
+					var md = this.average(sum[i]);
+				}
 				
 				var CV = '';
 				if(md){
@@ -1306,7 +1388,7 @@ Vue.component('analyzes-graphic-container', {
 						labels: labels, 
 						values: values[i], 
 						key: key, 
-						md: md + ' ' + unitMeasureName,
+						md: md.toFixed(2) + ' ' + unitMeasureName,
 						CV: CV,
 						N: N,
 						
@@ -1388,6 +1470,15 @@ Vue.component('analyzes-graphic', {
 	props: ['data'],
 
 	        methods: {
+	        	// return an array with the same length as modelArr filled with null except the first and last element which will have lineValue values 
+	        	getLimitsValues(modelArr, lineValue){
+	        		 var arr = Array.apply(null, Array(modelArr.length))
+	        		 arr.splice(0, 1, lineValue)
+	        		 arr.splice(-1, 1, lineValue)
+	        		 return arr
+	        	},   	
+
+	        	
 	    		drawChart(){
 	    			var ctx = document.getElementById("analyze_chart_"+this.data.key);
 	    			
@@ -1406,9 +1497,7 @@ Vue.component('analyzes-graphic', {
 	    			// check for target value
 	    			if(this.data.limits.target_val){
 	    				var target_val = this.data.limits.target_val;
-	    				var targetVals = this.data.values.map(function(x,i){
-	    					return target_val;
-	    				})
+	    				var targetVals = this.getLimitsValues(this.data.values, target_val)
 	    				
 	    				datasets.push(this.getDrawLineObject(targetVals, "rgba(0,166,90,1)", "rgba(0,166,90,0.4)") );
 	    			}
@@ -1422,13 +1511,10 @@ Vue.component('analyzes-graphic', {
 	    				var low_warning = parseInt(this.data.limits.target_val) - parseInt(this.data.limits.warning_val);
 	    				var hi_warning = parseInt(this.data.limits.target_val) + parseInt(this.data.limits.warning_val);
 	    				
-	    				var low_warning_arr = this.data.values.map(function(x,i){
-	    					return low_warning;
-	    				})
+	    				var low_warning_arr = this.getLimitsValues(this.data.values, low_warning)
 	    				
-	    				var hi_warning_arr = this.data.values.map(function(x,i){
-	    					return hi_warning;
-	    				})
+	    				var hi_warning_arr = this.getLimitsValues(this.data.values, hi_warning)
+	  
 	    				
 	    				datasets.push(this.getDrawLineObject(low_warning_arr, warningBorderColor, warningBackgroundColor) );
 	    				datasets.push(this.getDrawLineObject(hi_warning_arr, warningBorderColor, warningBackgroundColor) );
@@ -1443,13 +1529,9 @@ Vue.component('analyzes-graphic', {
 	    				var low_alert = parseInt(this.data.limits.target_val) - parseInt(this.data.limits.alert_val);
 	    				var hi_alert = parseInt(this.data.limits.target_val) + parseInt(this.data.limits.alert_val);
 	    				
-	    				var low_alert_arr = this.data.values.map(function(x,i){
-	    					return low_alert;
-	    				})
+	    				var low_alert_arr = this.getLimitsValues(this.data.values, low_alert)
 	    				
-	    				var hi_alert_arr = this.data.values.map(function(x,i){
-	    					return hi_alert;
-	    				})
+	    				var hi_alert_arr = this.getLimitsValues(this.data.values, hi_alert)
 	    				
 	    				datasets.push(this.getDrawLineObject(hi_alert_arr, alertBorderColor, alertBackgroundColor) );
 	    				datasets.push(this.getDrawLineObject(low_alert_arr, alertBorderColor, alertBackgroundColor) );
@@ -1459,12 +1541,12 @@ Vue.component('analyzes-graphic', {
 	    			var myChart = new Chart.Line(ctx, {
 	    			    type: 'line',
 	    			    data: {
-	    			        labels: this.data.labels,
+	    			        labels: this.shortedLabels,	    			        
 	    			        datasets: datasets
 	    			    },
 	    			    options: {
 				            legend: {
-				                display: false
+				                display: false,
 				            },
 	    			        scales: {
 	    			        	xAxes: [{
@@ -1477,8 +1559,19 @@ Vue.component('analyzes-graphic', {
 	    			            }]
 	    			        }
 	    			    }
+	    			   
 	    			});
 	    			
+	    			var days = this.data.labels
+	    			
+		        	document.getElementById("analyze_chart_"+this.data.key).onclick = function(evt){
+		                var activePoints = myChart.getElementsAtEvent(evt);
+		                var firstPoint = activePoints[0];
+		                if(firstPoint){
+			                var day = days[firstPoint._index];
+			                bus.$emit('editedItemDateChanged', day)
+		                }
+		            }	    			
 	    		},
 	    		
 	    		
@@ -1495,6 +1588,12 @@ Vue.component('analyzes-graphic', {
 
 	    			}
 	    		}
+	        },
+	        
+	        computed: {
+	        	shortedLabels(){
+	        		return this.data.labels.map(e => moment(e).format('DD-MMM'))
+	        	}
 	        },
 	        
 	        mounted: function(){
@@ -1620,12 +1719,14 @@ var amApp = new Vue({
 	data: {
 		currentView: 'pre-loading',
 		currentSubstance: null,
+		editedAnalyze: {},
 		
 		substancesList: [],		
 		materialsList: [],
 		measureUnitsList: [],
 		
 		analyzesList:[],
+		
 		
 		startDate:moment().subtract(30, 'days').format('YYYY-MM-DD'),
 		endDate:moment().format('YYYY-MM-DD')
@@ -1662,6 +1763,13 @@ var amApp = new Vue({
 			this.materialsList = arr;
 		},
 		
+		setEditedAnalyze(data){
+			this.editedAnalyze = data;
+		},		
+		
+		getAnalyzeFromList(title){
+			return this.analyzesList.find(e => e.title == title)
+		},
 		
 		updateCurrentSubstance(subst){
 			
@@ -1708,6 +1816,39 @@ var amApp = new Vue({
 			
 		},	
 		
+		fetchEditedItem(title){
+			var comp = this
+			var action = 'get_analyze';
+			jQuery.post(
+					ajax_obj.ajax_url, 
+				    {
+				        'action': action,
+				        'data':   title
+				    }, 
+				    function(response){
+		
+				    	var r = JSON.parse(response)
+				    	if(r.status == 'error'){
+				    		alert("Error: " + r.msg);
+				    		return;
+				    	} else if(r.result){ // if is an edit request		
+				    		comp.setEditedAnalyze(r.result);			    		
+				    	}
+				    }
+				);
+		},
+		
+		onEditedItemDateChange(date){
+			let analyze = this.getAnalyzeFromList(date)
+			if(analyze){
+	
+				this.editedAnalyze = analyze
+			}else{
+				this.fetchEditedItem(date)
+			}
+		},
+		
+		
 		onEndDateChange(date){
 			this.endDate = date;
 			this.fetchAnalyzes();
@@ -1723,13 +1864,16 @@ var amApp = new Vue({
 		},
 		
 		onAnalyzeUpdated(analyze){
-			var index = this.analyzesList.findIndex(function(a){
+			var index = this.analyzesList.findIndex(function(a){				
 				return analyze.title == a.title;
-			});
+			});	
 			
 			if(index != -1){
-				this.analyzesList.splice(index, 1, analyze);
+				let cp = JSON.parse(JSON.stringify(analyze))
+				this.analyzesList.splice(index, 1, cp);
 			}
+			
+			this.editedAnalyze = analyze
 		},
 		
 		getDaysInInterval(startDate, endDate){
@@ -1875,7 +2019,7 @@ var amApp = new Vue({
 			    	if(r.status == 'error'){
 			    		alert("Error: " + r.msg);
 			    		return;
-			    	} else if(r.result){ // if is an edit request			    		
+			    	} else if(r.result){ 
 			    		amApp.setupSubstancesList(r.result);
 			    		 amApp.checkLoadingStatus();
 			    	}
@@ -1894,7 +2038,7 @@ var amApp = new Vue({
 			    	if(r.status == 'error'){
 			    		alert("Error: " + r.msg);
 			    		return;
-			    	} else if(r.result){ // if is an edit request			    		
+			    	} else if(r.result){
 			    		amApp.setupMaterialsList(r.result);
 			    		 amApp.checkLoadingStatus();
 			    	}
@@ -1914,12 +2058,15 @@ var amApp = new Vue({
 			    	if(r.status == 'error'){
 			    		alert("Error: " + r.msg);
 			    		return;
-			    	} else if(r.result){ // if is an edit request			    		
+			    	} else if(r.result){ 
 			    		amApp.setupMeasureUnitsList(r.result);
 			    		 amApp.checkLoadingStatus();
 			    	}
 			    }
 			);
+		
+		// load the current day analyze
+		this.fetchEditedItem(moment().format('YYYY-MM-DD'))
 		
 		
 	}
@@ -1934,22 +2081,27 @@ var amApp = new Vue({
 
 var bus = new Vue();
 
+bus.$on('editedItemDateChanged', function(date){
+	amApp.onEditedItemDateChange(date);
+})
+
 bus.$on('endDateChanged', function(date){
 	amApp.onEndDateChange(date);
-});
+})
 
 bus.$on('startDateChanged', function(date){
 	amApp.onStartDateChange(date);
-});
+})
 
 bus.$on('currentSubstanceChanged', function(item){
 	amApp.onCurrentSubstanceChanged(item);
-});
+})
 
 bus.$on('analyzeUpdated', function(item){
 	amApp.onAnalyzeUpdated(item);
-});
+})
 
 bus.$on('substanceLimitsEdit', function(item){
 	amApp.onSubstanceLimitsEdit(item);
 })
+

@@ -2,7 +2,7 @@
 /**
  * Plugin Name: AnalyzesMonitor
  * Plugin URI: http://www.analyzesmonitor.com/plugin
- * Description: Monitor analyzes on daily bases
+ * Description: Monitor analyzes on daily basis
  * Version: 1.0
  * Author: Your Company
  * Author URI: http://yourURL.com

@@ -65,6 +65,7 @@
 			:measure-units-list="measureUnitsList"
 			:analyzes-list = "analyzesList"
 			:current-substance="currentSubstance"
+			:edited-analyze="editedAnalyze"
 			:start-date="startDate"
 			:end-date="endDate"
 			>

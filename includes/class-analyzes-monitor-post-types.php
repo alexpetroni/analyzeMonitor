@@ -30,12 +30,11 @@ class Analyzes_Monitor_Posttype{
 		);
 		
 		$analyze_args = array(
-				'public'	=> true,
+				'public'	=> false,
 				'query_var'	=> 'analyze',
 				'labels'	=> $analyze_labels,
 				'menu_position'	=> 5,
 				'has_archive'	=> false,
-				'public'	=> false,
 				'supports'	=> array('page-attributes', 'title', 'editor', 'author', 'excerpt'),
 				'hierarchical'	=> false
 		);

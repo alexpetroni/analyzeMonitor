@@ -50,7 +50,6 @@ class Analyzes_Monitor_Ajax{
 		
 		foreach($actionsArr as $action){
 			add_action('wp_ajax_'.$action, array(__CLASS__, $action));
-			// add_action('wp_ajax_nopriv_'.$action, array(__CLASS__, $action)); // !!! To delete on production
 		}		
 	}
 	
