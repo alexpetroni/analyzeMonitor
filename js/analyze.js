@@ -1508,8 +1508,8 @@ Vue.component('analyzes-graphic', {
 	    				var warningBorderColor = "rgba(243,156,18,1)";
 	    				var warningBackgroundColor = "rgba(243,156,18,0.4)";	    				
 
-	    				var low_warning = parseInt(this.data.limits.target_val) - parseInt(this.data.limits.warning_val);
-	    				var hi_warning = parseInt(this.data.limits.target_val) + parseInt(this.data.limits.warning_val);
+	    				var low_warning = parseFloat(this.data.limits.target_val) - parseFloat(this.data.limits.warning_val);
+	    				var hi_warning = parseFloat(this.data.limits.target_val) + parseFloat(this.data.limits.warning_val);
 	    				
 	    				var low_warning_arr = this.getLimitsValues(this.data.values, low_warning)
 	    				
@@ -1526,8 +1526,8 @@ Vue.component('analyzes-graphic', {
 	    				var alertBorderColor = "rgba(221,75,57,1)";
 	    				var alertBackgroundColor = "rgba(221,75,57,0.4)";	    				
 
-	    				var low_alert = parseInt(this.data.limits.target_val) - parseInt(this.data.limits.alert_val);
-	    				var hi_alert = parseInt(this.data.limits.target_val) + parseInt(this.data.limits.alert_val);
+	    				var low_alert = parseFloat(this.data.limits.target_val) - parseFloat(this.data.limits.alert_val);
+	    				var hi_alert = parseFloat(this.data.limits.target_val) + parseFloat(this.data.limits.alert_val);
 	    				
 	    				var low_alert_arr = this.getLimitsValues(this.data.values, low_alert)
 	    				

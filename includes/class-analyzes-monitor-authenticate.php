@@ -14,7 +14,7 @@ class Analyzes_Monitor_Authenticate{
 
 
 	public function redirect_nonauthenticated_users() {
-		if(! is_page( 'signup' ) && ! is_user_logged_in() ){
+		if( is_page( 'analyzes-dashboard' ) && ! is_user_logged_in() ){
 			wp_redirect( home_url('/signup/') );
 			exit;
 		}
